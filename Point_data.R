@@ -11,6 +11,13 @@ library(cdlTools)
 data_1 = read.csv("Ferrell_R Master Data Set_for stu1_CSV.csv", skip = 1, header = T, nrows = 1, as.is = T)
 
 
+head(data_1)
+
+names(data_1)
+
+#lets process the data 
+# all we want are coordiantes and depth 
+
 df = read.csv(file, skip = 3, header = F)
 colnames(df)= headers
 read
