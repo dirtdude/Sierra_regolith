@@ -6,6 +6,7 @@ library(reshape)
 library(rgeos)
 library(cdlTools)
 library(dplyr)
+library(sp)
 
 install.packages(c("maps", "mapdata"))
 # there is a lot of garbage in the way ryans files were set up
@@ -18,57 +19,56 @@ data_1 = read.csv("R Master Data Set_for stu1_CSV_cahnged values for_row 21.csv"
 # There was an obvious outlier, so I changed the value. There is another one, which I am less comfortable with, and so I'm manually changing and will likely throw it out  it out (117). 
 
 
-new<-distinct(data_2)
 
-
-unique(data_2)
-
-dim(data_1)
-
-head(data_1)
-
-names(data_1)
 
 #lets process the data 
 # all we want are coordiantes and depth 
-
+# 
 data_2<-select(data_1, Latitude, Longitude, Depth)
-
-with(data_2, identify(Latitude, Longitude))
+# 
+# with(data_2, plot(Latitude, Longitude))
+# 
+# with(data_2, identify(Latitude, Longitude))
 
 which(is.na(data_2$Depth))
   data.2<-slice(data_2, c(-117,-20 ))
+  which.max(data.2$Latitude)
   
-sum(is.na(data.2))
+  plot(data.2)
+  
+
+
+plot(data.3)
 
 data.3<-distinct(data.2)
+
+sum(is.na(data.3))
+class(data.3)
+
+with(data.3, plot(Latitude, Longitude))
+
+with(data.3, identify(Latitude, Longitude))
+
+data.3<-slice(data.3, -65)
 
 is.na(data.3)
 identify(points)
 dim(data_2)
 
-which.max(data_2$Longitude)
-
-data_2$Longitude[[103]]
-head(data_2$Longitude)
-
-data_2$Longitude<--(data_2$Longitude)
-head(data_2$Longitude)
 
 is.na(data_2$Longitude)
 
 # Coerce out of tibble (maybe it didn't matter but I didn;t like that it was stored as a dbl and I couldn;t see the decimal for longitude ')
 
-<-data.frame(data.3)
+data.3<-data.frame(data.3)
 
-
-library(sp)
+data.3$Longitude<--(data.3$Longitude)
 
 
 
 # ok, so the easiest data.3way is to JUST pull the coordiantes, and call them coords
 
-coords<-select(data.3, Latitude, Longitude)
+coords<-select(data.3,  Longitude, Latitude)
 
 head(coords)
 
@@ -76,72 +76,123 @@ head(coords)
 crdref <- CRS('+proj=longlat +datum=WGS84')
 coords<-SpatialPoints(coords,  proj4string=crdref)
 
+
+
+coordinates(coords) <- c("X", "Y")
+proj4string(coords) <- CRS("+proj=longlat +datum=WGS84")  ## for example
+
+res <- spTransform(coords, CRS("+proj=utm +zone=11 ellps=WGS84"))
+
 crs<-CRS("+init=epsg:3310")
 
-#points<-spTransform(coords, crs)# still doesn;t want to project so fuck it 
+points<-spTransform(coords, crs)# still doesn;t want to project so fuck it 
 
 
 #proj4string(coords) <- CRS("+proj=longlat +datum=WGS84")
 
-depth<-select(data.3, Depth)
+depth<-select(data.3, Depth)#grab jus teh column we are interesetd in . 
 
-data_3<-SpatialPointsDataFrame(coords, depth)
+
+data_3<-SpatialPointsDataFrame(res, depth)
+
+
 
 # oks so we are good now
 
 #Ok now create a shape file
-?shapefile
 
-shapefile()
 
 shapefile(data_3, filename='depth points', overwrite=TRUE)
 
 points <- shapefile("depth points.shp")
 
-crs<-CRS("+init=epsg:3310")
+#points<-spTransform(points, crs)#
 
+#check dta cleanlyness
+plot(points, add=T)
+length(points)# looks good 
 
+sum(is.na(points$Depth)) # ok cool
 
-
-plot(s)
-
-s
+#############Ok the data Look good
 
 #lets use california albers for our projections
 #EPSG:3310: NAD83 / California Albers
 #newData <- spTransform(x, CRS("+init=epsg:4238"))
 
-install.packages("sf")
-library("sf")
-crs.new<-CRS("+init=epsg:3310")
+#############################################################################
+              #Notes: Ok my conclusion is that this projection doesn't workwitht             these data, 
+              # 
 
-crs.new<-CRS("+init=EPSG:4326")
+# Now we will attempt to import the rasters
 
-crs.new<- CRS("+proj=aea +lat_1=34 +lat_2=40.5 +lat_0=0 +lon_0=-120 +x_0=0
-+y_0=-4000000 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+setwd("C:/Users/stuwi/Dropbox/Sierra Project/GIS data/")
 
-plot(points)
+list.dirs(path = ".", full.names = TRUE, recursive = TRUE)# this was so I could find out waht each directory was and then write a raster with it. 
+# for this step I just did a bunch of copy and pasting and put the raster and file name in, eg changed directory, then used directory name to name the raster. 
+setwd("C:/Users/stuwi/Dropbox/Sierra Project/GIS data/tpic8_8411/")
+tpic8_8411<-raster("w001001.adf")
+#r2<-raster("aspect_8411.adf")
+# ok so we are getting somewhere
+
+(aspect, cticlp2), dist2oc, dist2r8411, dsdf8411, dist2str8411, tpic8_8411 )
+
+ext<-extent(dsdf8411)
+covariables<-stack (aspect,dist2oc, dist2r8411, dsdf8411, dist2str8411, tpic8_8411 ) #cticlp2
+
+f3 <- function(raster) {
+  #raster<-projectRaster(raster, crs=crs)
+  raster<-resample(raster, dsdf8411, method="bilinear")
+  raster<-crop(raster, extent(dsdf8411))
+  return(raster)
+  
+}
+
+# lets crop extent and get different 
+
+aspect.2<-f3(aspect)
+dist2oc.2<-f3(dist2oc)
+dist2r8411.2<-f3(dist2r8411)
+dsdf8411.2<-f3(dsdf8411)
+dist2str8411.2<-f3(dist2str8411)
+tpic8_8411.2<-f3(tpic8_8411)
+cticlp2.2<-f3(cticlp2)
+
+covariables<-stack(aspect.2, dist2oc.2, dist2r8411.2, dsdf8411.2, dist2str8411.2, tpic8_8411.2, cticlp2.2 )
+
+covariable_stack<-extract(covariables, points)
+
+data_stack<-data.frame(cbind(points$Depth, covariable_stack))
+
+names(data_stack)[names(data_stack) == 'V1'] <- 'depth'
 
 
+############THe Modeling Section########
+library(randomForest)
+  m2<-randomForest(depth~., data=data_stack, importance=TRUE)
+# 
+# twi SAME AS cti, TPI is the same as TPI, 
+  
+  planform  curvature topographic
+ # Transvers cant get
+ # cant get  profile curvature
+
+m2
+head(data_stack)
+
+m1<-lm(depth~., data=data_stack)
+summary(m1)
 
 
-crs(points)
-points<-spTransform(points, crs.new)# ok so this worked fine
+model<-predict(covariables, m1, ext=ext)
+
+plot(model)
+  crs<-crs(aspect.2)
 
 
+test_stack<-stack(r1, r2)
+crs<-crs(r1)
 
-proj4string(data_3) <- CRS("+proj=longlat +datum=WGS84")
-pts <- SpatialPoints(lonlat, proj4string=crdref)
+plot(r1)
 
-plot(data_3)
 
-#lets try with sf
-library("sf")
-tdwg4.laea = sf::read_sf("depth points.shp")  # assumes in project root
-tdwg4.laea = sf::st_transform(tdwg4.laea, 3310)
-
-plot(tdwg4.laea)
-
-which.max(depth)
-
-# Ok my conclusion is that this projection doesn;t work witht these data, 
